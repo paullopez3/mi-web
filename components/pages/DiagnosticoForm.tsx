@@ -48,9 +48,12 @@ const urgencyOptions = [
   "Estoy explorando opciones",
 ];
 
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/mvzyjbgj";
+
 export default function DiagnosticoForm() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedNeeds, setSelectedNeeds] = useState<string[]>([]);
 
   function toggleNeed(need: string) {
@@ -62,9 +65,35 @@ export default function DiagnosticoForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    setSubmitted(true);
+    setError(null);
+
+    const form = e.currentTarget;
+    const data = Object.fromEntries(new FormData(form).entries());
+    if (selectedNeeds.length > 0) {
+      data.necesidades = selectedNeeds.join(", ");
+    }
+
+    try {
+      const res = await fetch(FORMSPREE_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setError(
+          (body as { error?: string }).error ||
+            "No se pudo enviar el formulario. Por favor inténtalo de nuevo."
+        );
+      }
+    } catch {
+      setError("Error de conexión. Verifica tu internet e inténtalo de nuevo.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (submitted) {
@@ -130,6 +159,7 @@ export default function DiagnosticoForm() {
             </label>
             <input
               type="text"
+              name="nombre"
               required
               placeholder="Tu nombre completo"
               className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all"
@@ -147,6 +177,7 @@ export default function DiagnosticoForm() {
             </label>
             <input
               type="text"
+              name="empresa"
               required
               placeholder="Nombre de tu empresa"
               className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all"
@@ -164,6 +195,7 @@ export default function DiagnosticoForm() {
             </label>
             <input
               type="text"
+              name="cargo"
               placeholder="Tu cargo o rol"
               className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all"
               style={{
@@ -180,6 +212,7 @@ export default function DiagnosticoForm() {
             </label>
             <input
               type="tel"
+              name="telefono"
               required
               placeholder="+593 99 000 0000"
               className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all"
@@ -197,6 +230,7 @@ export default function DiagnosticoForm() {
             </label>
             <input
               type="email"
+              name="email"
               required
               placeholder="correo@empresa.com"
               className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all"
@@ -214,6 +248,7 @@ export default function DiagnosticoForm() {
             </label>
             <input
               type="url"
+              name="sitio_web"
               placeholder="www.tuempresa.com"
               className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all"
               style={{
@@ -231,6 +266,7 @@ export default function DiagnosticoForm() {
             Sector *
           </label>
           <select
+            name="sector"
             required
             className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all bg-white appearance-none"
             style={{
@@ -298,6 +334,7 @@ export default function DiagnosticoForm() {
             </label>
             <textarea
               rows={3}
+              name="objetivo"
               placeholder="Cuéntanos qué quieres lograr con tu empresa en los próximos meses..."
               className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all resize-none"
               style={{
@@ -315,6 +352,7 @@ export default function DiagnosticoForm() {
                 Presupuesto aproximado
               </label>
               <select
+                name="presupuesto"
                 className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all appearance-none"
                 style={{
                   borderColor: "rgba(73, 4, 144, 0.15)",
@@ -334,6 +372,7 @@ export default function DiagnosticoForm() {
                 Urgencia del proyecto
               </label>
               <select
+                name="urgencia"
                 className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all appearance-none"
                 style={{
                   borderColor: "rgba(73, 4, 144, 0.15)",
@@ -356,6 +395,7 @@ export default function DiagnosticoForm() {
             </label>
             <textarea
               rows={3}
+              name="mensaje"
               placeholder="Cualquier información adicional que consideres relevante..."
               className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all resize-none"
               style={{
@@ -368,6 +408,18 @@ export default function DiagnosticoForm() {
           </div>
         </div>
       </div>
+
+      {error && (
+        <div
+          className="p-4 rounded-xl text-sm text-red-700 flex items-start gap-3"
+          style={{ background: "rgba(220, 38, 38, 0.06)", border: "1px solid rgba(220, 38, 38, 0.2)" }}
+        >
+          <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Submit */}
       <button
